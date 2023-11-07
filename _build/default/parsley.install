@@ -1,8 +1,0 @@
-lib: [
-  "_build/install/default/lib/parsley/META"
-  "_build/install/default/lib/parsley/dune-package"
-  "_build/install/default/lib/parsley/opam"
-]
-bin: [
-  "_build/install/default/bin/parsley"
-]

@@ -1,4 +1,3 @@
-
 (* A sample file for your ocaml prover.
 
    The syntax here is chosen so that these files can be parsed by the ocaml compiler.

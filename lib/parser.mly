@@ -1,17 +1,27 @@
 %{
   open Ast
 %}
+
 %token <string> VAR
-%token LPAREN
-%token RPAREN
-%token COMMA
-%token EOF
+%token LET PROVE EQUALS LPAREN RPAREN COMMA EOF COLON
+%token <string> HINT
+%token AXIOM
+
 %start main
-%type <expression list> main
+%type <statement list> main
+
 %%
+
 main:
-  | e = expr; EOF { [e] }
+  | statements = separated_list (EOF, statement) ; EOF { statements }
+
+statement:
+  | LET ; PROVE ; id = VAR ; LPAREN ; arg = VAR ; RPAREN ; EQUALS ; expr = expr ; hint = option(hint) { Prove (id, expr, hint) }
+
+hint:
+  | HINT ; COLON ; AXIOM { Axiom }
+
 expr:
-  | var = VAR { Variable var }
   | func = expr ; arg = VAR { Application (func, Variable arg) }
   | func = expr ; LPAREN ; args = separated_nonempty_list(COMMA, expr) ; RPAREN { Application (func, Tuple args)}
+  | var = VAR { Variable var }

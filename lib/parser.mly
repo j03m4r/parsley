@@ -13,12 +13,5 @@ main:
   | e = expr; EOF { [e] }
 expr:
   | func = expr ; arg = VAR { Application (func, Variable arg) }
-  | func = expr ; LPAREN ; args = separated_nonempty_list(COMMA, expr) ; RPAREN { 
-    let rec rec_app lst =
-      match lst with
-      | [] -> Variable "null"
-      | h::[] -> Application (func, h)
-      | h::tl -> Application (h, rec_app tl)
-    in rec_app args
-    }
+  | func = expr ; LPAREN ; args = separated_nonempty_list(COMMA, expr) ; RPAREN { Application (func, Tuple args)}
   | var = VAR { Variable var }

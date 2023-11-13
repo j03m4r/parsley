@@ -11,5 +11,6 @@ rule token = parse
  | ['a'-'z' 'A'-'Z' '0'-'9']+ as var { VAR(var) }
  | "(" { LPAREN }
  | ")" { RPAREN }
+ | "," { COMMA }
  | _ { raise (SyntaxError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
  | eof { EOF }

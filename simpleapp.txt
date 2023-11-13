@@ -1,1 +1,1 @@
-cf (x, y)
+cf a b (a, b)

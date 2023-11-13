@@ -16,13 +16,14 @@ let parse (s : string) : expression list =
 let rec string_of_declaration (p : expression) =
   match p with
     | Variable x -> x
-    | Application ((func : expression), (var : expression)) -> string_of_declaration func ^ " (" ^ string_of_declaration var ^ ")"
+    | Application ((func : expression), (var : expression)) -> string_of_declaration func ^ " " ^ string_of_declaration var 
     | Tuple (vars : expression list) -> begin
-      let rec string_of_exprs (exprs : expression list) = 
+      let lstLen = List.length vars in
+      "(" ^ let rec string_of_exprs (exprs : expression list) (count : int)= 
         match exprs with
         | [] -> ""
-        | h::tl -> string_of_declaration h ^ string_of_exprs tl
-      in string_of_exprs vars
+        | h::tl -> string_of_declaration h ^ (if count!=lstLen then ", " else "") ^ string_of_exprs tl (count+1)
+      in string_of_exprs vars 1 ^ ")"
     end
   (* match p with
   | [] -> "\n"

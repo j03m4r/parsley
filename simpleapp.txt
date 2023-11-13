@@ -1,1 +1,2 @@
-cf a b (a, b)
+(* asdfasdf *)
+cf ((a, b)) c

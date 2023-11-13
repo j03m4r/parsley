@@ -56,6 +56,7 @@ _vendor/
 .env.local
 .env.*.local
 *.log
+scratch.txt
 
 # === Merlin ===
 .merlin

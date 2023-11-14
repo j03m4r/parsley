@@ -5,6 +5,3 @@ type expression =
 
 type statement =
   | Prove of string * expression * hint option
-
-and hint =
-  | Axiom

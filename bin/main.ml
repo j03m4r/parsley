@@ -2,7 +2,8 @@
    I've called it procaml.ml there, some will probably have called it halloween.ml.
    Names may vary, but these are the things this executable needs.
    In any case, these four definitions should be the only things you need to change. *)
-let string_of_declaration = Parsley.string_of_declaration
+(* let string_of_expression = Parsley.string_of_expression *)
+let string_of_statement = Parsley.string_of_statement
 let mainParser = Parsley.Parser.main
 let mainLexer = Parsley.Lexer.token
 module Parser : (sig exception Error end) = Parsley.Parser
@@ -15,7 +16,7 @@ module Parser : (sig exception Error end) = Parsley.Parser
 
 (* the function that prints everything. *)
 (* has a side-effect (namely: it prints) so it belongs here *)
-let print_all = Stdlib.List.map (fun decl -> print_endline (string_of_declaration decl))
+let print_all = Stdlib.List.map (fun statement -> print_endline (string_of_statement statement))
 
 (* An improved function to parse everything from a 'channel'.
  * It has a side-effect (namely: reads from an input-channel)

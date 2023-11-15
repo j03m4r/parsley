@@ -1,0 +1,2 @@
+let (*prove*) cf_idempotent (h : int)
+ = (cf (cf h) = cf h)

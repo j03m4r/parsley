@@ -4,7 +4,7 @@ type expression =
   | Variable of string
   | Parameter of string * string
 and pattern = 
-  | Function of expression
+  | Constructor of expression * ((expression list) option)
 and equality =
   | Equality of expression * expression
 and hint =
@@ -12,8 +12,9 @@ and hint =
   | Induction of string
   | Nil
 and declaration =
-  | Prove of pattern * equality * hint
+  | Prove of expression * equality * hint
   | Definition of equality
+  | Variant of string * pattern list
 
 (* 
  had to go to volleyball but next things to work on:

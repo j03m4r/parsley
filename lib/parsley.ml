@@ -33,7 +33,16 @@ let string_of_equality (equality : equality) =
 
 let string_of_pattern (pattern : pattern) =
   match pattern with
-  | Function (expression : expression) -> string_of_expression expression
+  | Constructor ((name : expression), (Some (parameters) : expression list option)) -> begin
+    "| " ^ string_of_expression name ^ " of " ^ (
+      let lstLen = List.length parameters in
+      let rec string_of_params (parameters : expression list) (count : int) = 
+        match parameters with
+        | [] -> ""
+        | h::tl -> string_of_expression h ^ (if count!=lstLen then " * " else "") ^ string_of_params tl (count+1)
+      in string_of_params parameters 1)
+  end
+  | Constructor ((name : expression), None) -> string_of_expression name ^ " "
 
 let string_of_hint (hint : hint) =
   match hint with
@@ -43,7 +52,15 @@ let string_of_hint (hint : hint) =
 
 let string_of_declaration (declaration : declaration) =
   match declaration with
-  | Prove ((pattern : pattern), (equality : equality), (hint : hint)) -> begin
-    "let (*prove*) " ^ string_of_pattern pattern ^ " = " ^ string_of_equality equality ^ " " ^ string_of_hint hint
+  | Prove ((expression : expression), (equality : equality), (hint : hint)) -> begin
+    "let (*prove*) " ^ string_of_expression expression ^ " = " ^ string_of_equality equality ^ " " ^ string_of_hint hint
   end
   | Definition (equality : equality) -> string_of_equality equality
+  | Variant ((name : string), (patterns : pattern list)) -> begin
+    "type " ^ name ^ " = " ^
+    let rec helper (patterns : pattern list) = 
+      match patterns with
+      | [] -> ""
+      | h::tl -> string_of_pattern h ^ helper tl
+    in helper patterns
+  end

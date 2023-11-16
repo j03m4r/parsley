@@ -11,7 +11,11 @@ rule token = parse
     | "let (*prove*)" { PROVE }
     | "let rec" { LET }
     | "(*hint: " { hint lexbuf }
+    | "type" { TYPE }
+    | "of" { OF }
     | ['a'-'z' 'A'-'Z' '0'-'9' '_']+ as var { VAR(var) }
+    | "|" { VERTBAR }
+    | "*" { STAR }
     | "(*" { comment 0 lexbuf }
     | "*)" { token lexbuf }
     | "(" { LPAREN }

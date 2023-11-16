@@ -22,6 +22,10 @@ let (*prove*) cf_inv_property (h : int)
  = (cf (inv (cf (inv h))) = cf h)
 (* no hints! *)
 
+type list = (* To simplify parsing, each variant starts with | *)
+  | Nil
+  | Cons of (int * list)
+
 (* Output should read something like this:
   Proof of cf_inv_property:
    cf (inv (cf (inv h)))

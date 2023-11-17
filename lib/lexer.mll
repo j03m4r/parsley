@@ -13,6 +13,9 @@ rule token = parse
     | "(*hint: " { hint lexbuf }
     | "type" { TYPE }
     | "of" { OF }
+    | "match" { MATCH }
+    | "with" { WITH }
+    | "->" { ARROW }
     | ['a'-'z' 'A'-'Z' '0'-'9' '_']+ as var { VAR(var) }
     | "|" { VERTBAR }
     | "*" { STAR }

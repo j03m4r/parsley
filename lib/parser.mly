@@ -32,7 +32,7 @@ expression:
   | func = expression ; arg = VAR { Application (func, Variable arg) }
   | func = expression ; LPAREN ; args = separated_nonempty_list(COMMA, expression) ; RPAREN { Application (func, Tuple args) }
   | var = VAR { Variable var }
-  | LPAREN ; var = VAR ; RPAREN { Variable var }
+  | LPAREN ; expression = expression ; RPAREN { expression }
 matchee:
   | name = VAR ; ARROW ; expression = expression { Matchee (Variable name, None, expression) }
   | name = VAR ; LPAREN ; params = separated_nonempty_list(COMMA, parameter) ; RPAREN ; ARROW ; expression = expression { Matchee (Variable name, Some (Tuple params), expression) }

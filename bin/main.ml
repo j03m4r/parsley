@@ -43,7 +43,7 @@ let print_all = Stdlib.List.map (fun decl -> print_endline (string_of_declaratio
  * to change your lexer, the work-around is to remove all newlines
  * from the input file to get an error location.
  *)
-let with_open_file (filename : string) (chan : in_channel)
+let with_open_file fn (filename : string) (chan : in_channel)
  = let buf = Lexing.from_channel ~with_positions:true chan in
  (* Lexing.set_filename buf filename; If your ocaml is new enough, this line may help improve error messages. *)
  match mainParser mainLexer buf with
@@ -93,7 +93,7 @@ let usage_msg = Sys.executable_name ^ " [--printback <filename>]"
    Note that "Arg.String" takes a function of type: string -> unit.
    This is where we plug in the 'printfile' function we wrote above. *)
 let speclist =
-  [("--printback", Arg.String printfile, "Print the parsed file back out")]
+  [("--printback", Arg.String (with_file print_all), "Print the parsed file back out")]
 
 let _ = Arg.parse
            speclist

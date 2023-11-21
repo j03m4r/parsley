@@ -1,28 +1,3 @@
-(* A sample file for your ocaml prover.
-
-   The syntax here is chosen so that these files can be parsed by the ocaml compiler.
-   This allows you to, when you write files for your prover,
-     check the types of your definitions and lemmas, and even test them.
-
-   Your tool is not expected to parse all of ocaml: only the subset of ocaml used in this file.
-   In addition to ocaml syntax, this file uses annotations that ocaml does not have:
-   They all use ocaml-comments without spaces like, and they are:
-     (*prove*)  (immediately following the 'let' keyword)
-     (*hint: ..*) (at the end of a 'let (*prove*)' statement)
-   Because the are comments, they are ignored by ocaml.
-   However, your tool should parse them and use them as explained below.
-   Inside the hint annotations, you'll see the following keywords:
-     axiom
-     induction <var>
-
-   Note that comments are nestable in ocaml, and should be in your language too,
-     so the use of '(*' followed by '*)' in this sentence and the lines above is all fine,
-     since all opening "(*"s are matched by "*)"s.
-   Regular comments, the ones that are not prove or hint, always have a space following the * symbol.
-*)
-
-(* A type declaration for lists of integers.
-   You need to know about these for induction proofs, to know the cases. *)
 type list = (* To simplify parsing, each variant starts with | *)
   | Nil
   | Cons of (int * list)

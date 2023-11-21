@@ -1,0 +1,168 @@
+
+** Conflict (shift/reduce) in state 46.
+** Tokens involved: VAR LPAREN
+** The following explanations concentrate on token VAR.
+** This state is reached from main after reading:
+
+PROVE VAR list(parameter) EQUALS LPAREN MATCH VAR WITH VERTBAR VAR ARROW expression
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+main 
+list(declaration) EOF 
+declaration list(declaration) 
+PROVE VAR list(parameter) EQUALS equality option(hint) 
+                                 LPAREN expression EQUALS expression RPAREN 
+                                        (?)
+
+** In state 46, looking ahead at VAR, shifting is permitted
+** because of the following sub-derivation:
+
+MATCH VAR WITH list(pattern) 
+               pattern list(pattern) 
+               VERTBAR VAR ARROW expression 
+                                 expression . VAR 
+
+** In state 46, looking ahead at VAR, reducing production
+** pattern -> VERTBAR VAR ARROW expression
+** is permitted because of the following sub-derivation:
+
+expression VAR // lookahead token appears
+MATCH VAR WITH list(pattern) // lookahead token is inherited
+               pattern list(pattern) // lookahead token is inherited because list(pattern) can vanish
+               VERTBAR VAR ARROW expression . 
+
+** Conflict (shift/reduce) in state 37.
+** Tokens involved: VAR LPAREN
+** The following explanations concentrate on token VAR.
+** This state is reached from main after reading:
+
+PROVE VAR list(parameter) EQUALS LPAREN MATCH VAR WITH VERTBAR VAR LPAREN option(separated_nonempty_list(COMMA,parameter)) RPAREN ARROW expression
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+main 
+list(declaration) EOF 
+declaration list(declaration) 
+PROVE VAR list(parameter) EQUALS equality option(hint) 
+                                 LPAREN expression EQUALS expression RPAREN 
+                                        (?)
+
+** In state 37, looking ahead at VAR, shifting is permitted
+** because of the following sub-derivation:
+
+MATCH VAR WITH list(pattern) 
+               pattern list(pattern) 
+               VERTBAR VAR LPAREN option(separated_nonempty_list(COMMA,parameter)) RPAREN ARROW expression 
+                                                                                                expression . VAR 
+
+** In state 37, looking ahead at VAR, reducing production
+** pattern -> VERTBAR VAR LPAREN option(separated_nonempty_list(COMMA,parameter)) RPAREN ARROW expression
+** is permitted because of the following sub-derivation:
+
+expression VAR // lookahead token appears
+MATCH VAR WITH list(pattern) // lookahead token is inherited
+               pattern list(pattern) // lookahead token is inherited because list(pattern) can vanish
+               VERTBAR VAR LPAREN option(separated_nonempty_list(COMMA,parameter)) RPAREN ARROW expression . 
+
+** Conflict (shift/reduce) in state 31.
+** Token involved: VERTBAR
+** This state is reached from main after reading:
+
+TYPE VAR EQUALS VERTBAR VAR ARROW MATCH VAR WITH pattern
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+main 
+list(declaration) EOF 
+declaration list(declaration) 
+TYPE VAR EQUALS list(pattern) 
+                (?)
+
+** In state 31, looking ahead at VERTBAR, reducing production
+** list(pattern) ->
+** is permitted because of the following sub-derivation:
+
+pattern list(pattern) // lookahead token appears because list(pattern) can begin with VERTBAR
+VERTBAR VAR ARROW expression // lookahead token is inherited
+                  MATCH VAR WITH list(pattern) // lookahead token is inherited
+                                 pattern list(pattern) // lookahead token is inherited
+                                         . 
+
+** In state 31, looking ahead at VERTBAR, shifting is permitted
+** because of the following sub-derivation:
+
+pattern list(pattern) 
+VERTBAR VAR ARROW expression 
+                  MATCH VAR WITH list(pattern) 
+                                 pattern list(pattern) 
+                                         pattern list(pattern) 
+                                         . VERTBAR VAR OF LPAREN separated_nonempty_list(STAR,strings) RPAREN 
+
+** Conflict (shift/reduce) in state 30.
+** Token involved: VERTBAR
+** This state is reached from main after reading:
+
+TYPE VAR EQUALS VERTBAR VAR ARROW MATCH VAR WITH
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+main 
+list(declaration) EOF 
+declaration list(declaration) 
+TYPE VAR EQUALS list(pattern) 
+                (?)
+
+** In state 30, looking ahead at VERTBAR, reducing production
+** list(pattern) ->
+** is permitted because of the following sub-derivation:
+
+pattern list(pattern) // lookahead token appears because list(pattern) can begin with VERTBAR
+VERTBAR VAR ARROW expression // lookahead token is inherited
+                  MATCH VAR WITH list(pattern) // lookahead token is inherited
+                                 . 
+
+** In state 30, looking ahead at VERTBAR, shifting is permitted
+** because of the following sub-derivation:
+
+pattern list(pattern) 
+VERTBAR VAR ARROW expression 
+                  MATCH VAR WITH list(pattern) 
+                                 pattern list(pattern) 
+                                 . VERTBAR VAR OF LPAREN separated_nonempty_list(STAR,strings) RPAREN 
+
+** Conflict (shift/reduce) in state 5.
+** Token involved: LPAREN
+** This state is reached from main after reading:
+
+PROVE VAR list(parameter) EQUALS LPAREN MATCH VAR WITH VERTBAR VAR
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+main 
+list(declaration) EOF 
+declaration list(declaration) 
+PROVE VAR list(parameter) EQUALS equality option(hint) 
+                                 LPAREN expression EQUALS expression RPAREN 
+                                        (?)
+
+** In state 5, looking ahead at LPAREN, shifting is permitted
+** because of the following sub-derivation:
+
+MATCH VAR WITH list(pattern) 
+               pattern list(pattern) 
+               VERTBAR VAR . LPAREN option(separated_nonempty_list(COMMA,parameter)) RPAREN ARROW expression 
+
+** In state 5, looking ahead at LPAREN, reducing production
+** pattern -> VERTBAR VAR
+** is permitted because of the following sub-derivation:
+
+expression LPAREN separated_nonempty_list(COMMA,expression) RPAREN // lookahead token appears
+MATCH VAR WITH list(pattern) // lookahead token is inherited
+               pattern list(pattern) // lookahead token is inherited because list(pattern) can vanish
+               VERTBAR VAR . 

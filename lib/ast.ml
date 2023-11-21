@@ -1,22 +1,22 @@
+
+type parameter = Parameter of string * string
+
 type expression =
   | Application of expression * expression
   | Tuple of expression list
   | Variable of string
-  | Parameter of string * string
-  | Match of expression * (pattern list)
+  | Match of string * (pattern list)
 and pattern = 
-  | Constructor of expression * ((expression list) option)
-  | Function of expression * string
-  | Matchee of expression * expression option * expression
+  | Constructor of string * ((string list) option)
+  | Matchee of string * ((parameter list) option) * expression
 and equality =
   | Equality of expression * expression
 and hint =
   | Axiom
   | Induction of string
-  | Nil
 and declaration =
-  | Prove of expression * equality * hint
-  | Definition of pattern * expression
+  | Prove of string * parameter list * equality * hint option
+  | Definition of string * parameter list * expression * string
   | Variant of string * pattern list
 
 (* 

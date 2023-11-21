@@ -10,17 +10,19 @@ rule token = parse
     | newline { Lexing.new_line lexbuf; token lexbuf }
     | "let (*prove*)" { PROVE }
     | "let rec" { LET }
-    | "(*hint: " { hint lexbuf }
+    | "(*hint: " { HINT }
+    | "axiom" { AXIOM }
+    | "induction" { INDUCTION }
     | "type" { TYPE }
     | "of" { OF }
     | "match" { MATCH }
     | "with" { WITH }
     | "->" { ARROW }
-    | ['a'-'z' 'A'-'Z' '0'-'9' '_']+ as var { VAR(var) }
     | "|" { VERTBAR }
-    | "*" { STAR }
+    | ['a'-'z' 'A'-'Z' '0'-'9' '_']+ as var { VAR(var) }
     | "(*" { comment 0 lexbuf }
-    | "*)" { token lexbuf }
+    | "*)" { ENDCOMMENT }
+    | "*" { STAR }
     | "(" { LPAREN }
     | ")" { RPAREN }
     | "," { COMMA }
@@ -28,9 +30,6 @@ rule token = parse
     | "=" { EQUALS }
     | _ { raise (SyntaxError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
     | eof { EOF }
-and hint = parse
-    | "axiom" { AXIOM }
-    | "induction " { INDUCTION }
 and comment level = parse
     | "*)" { if level = 0 then token lexbuf else comment (level - 1) lexbuf }
     | "(*" { comment (level + 1) lexbuf }

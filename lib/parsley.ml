@@ -13,6 +13,10 @@ let parse (s : string) : declaration list =
   | Constructor (name, patterns) -> name ^ " (" ^ (String.concat ", " (List.map string_of_pattern patterns)) ^ ")"
   ... of course, this part will depend on what your datatypes look like. *)
 
+let string_of_parameter (parameter : parameter) =
+  match parameter with
+  | Parameter ((var : string), (varType : string)) -> "(" ^ var ^ " : " ^ varType ^ ")"
+
 let rec string_of_expression (expr : expression) =
   match expr with
     | Variable x -> x
@@ -25,8 +29,7 @@ let rec string_of_expression (expr : expression) =
         | h::tl -> string_of_expression h ^ (if count!=lstLen then ", " else "") ^ string_of_exprs tl (count+1)
       in string_of_exprs vars 1 ^ ")"
     end
-    | Parameter ((var : string), (varType : string)) -> "(" ^ var ^ " : " ^ varType ^ ")"
-    | Match ((var : expression), (matches : pattern list)) -> "match " ^ string_of_expression var ^ " with " ^ (
+    | Match ((var : string), (matches : pattern list)) -> "match " ^ var ^ " with " ^ (
       let rec helper (patterns : pattern list) = 
       match patterns with
       | [] -> ""
@@ -35,36 +38,36 @@ let rec string_of_expression (expr : expression) =
     )
 and string_of_pattern (pattern : pattern) =
   match pattern with
-  | Constructor ((name : expression), (Some (parameters) : expression list option)) -> begin
-    "| " ^ string_of_expression name ^ " of " ^ (
-      let lstLen = List.length parameters in
-      let rec string_of_params (parameters : expression list) (count : int) = 
-        match parameters with
-        | [] -> ""
-        | h::tl -> string_of_expression h ^ (if count!=lstLen then " * " else "") ^ string_of_params tl (count+1)
-      in string_of_params parameters 1)
+  | Constructor ((name : string), (Some (parameters) : (string list) option)) -> begin
+    "| " ^ name ^ " of " ^ (String.concat " * " parameters) 
   end
-  | Constructor ((name : expression), None) -> "| " ^ string_of_expression name ^ " "
-  | Function ((func : expression), (funcType : string)) -> "let rec " ^ string_of_expression func ^ " : " ^ funcType
-  | Matchee ((name : expression), None, (expression : expression)) -> "| " ^ string_of_expression name ^ " -> " ^ string_of_expression expression ^ " "
-  | Matchee ((name : expression), (Some (parameters) : expression option), (expression : expression)) -> "| " ^ string_of_expression name ^ " " ^ string_of_expression parameters ^ " -> " ^ string_of_expression expression ^ " "
+  | Constructor ((name : string), None) -> "| " ^ name ^ " "
+  | Matchee ((name : string), None, (expression : expression)) -> "| " ^ name ^ " -> " ^ string_of_expression expression ^ " "
+  | Matchee ((name : string), (Some (parameters) : (parameter list) option), (expression : expression)) -> begin
+    let params_string = List.map string_of_parameter parameters in
+    "| " ^ name ^ " (" ^ (String.concat ", " params_string) ^ ") -> " ^ string_of_expression expression ^ " "
+  end
 
 let string_of_equality (equality : equality) = 
   match equality with
   | Equality ((left : expression), (right : expression)) -> "(" ^ string_of_expression left ^ " = " ^ string_of_expression right ^ ")"
 
-let string_of_hint (hint : hint) =
+let string_of_hint (hint : hint option) =
   match hint with
-  | Axiom -> "(*hint: axiom *)"
-  | Induction (var : string) -> "(*hint: induction " ^ var ^ " *)"
-  | _ -> ""
+  | Some Axiom -> "(*hint: axiom *)"
+  | Some Induction (var : string) -> "(*hint: induction " ^ var ^ " *)"
+  | _ -> "(*no hint*)"
 
 let string_of_declaration (declaration : declaration) =
   match declaration with
-  | Prove ((expression : expression), (equality : equality), (hint : hint)) -> begin
-    "let (*prove*) " ^ string_of_expression expression ^ " = " ^ string_of_equality equality ^ " " ^ string_of_hint hint
+  | Prove ((funcName : string), (parameters : parameter list), (equality : equality), (hint : hint option)) -> begin
+    let params_string = List.map string_of_parameter parameters in
+    "let (*prove*) " ^ funcName ^ (String.concat " " params_string) ^ " = " ^ string_of_equality equality ^ " " ^ string_of_hint hint
   end
-  | Definition ((pattern : pattern), (expression : expression)) -> string_of_pattern pattern ^ " = " ^ string_of_expression expression
+  | Definition ((funcName : string), (parameters : parameter list), (expression : expression), (defType : string)) -> begin
+    let params_string = List.map string_of_parameter parameters in
+    "let rec " ^ funcName ^ (String.concat " " params_string) ^ " : " ^ defType ^ " = " ^ string_of_expression expression
+  end
   | Variant ((name : string), (patterns : pattern list)) -> begin
     "type " ^ name ^ " = " ^
     let rec helper (patterns : pattern list) = 

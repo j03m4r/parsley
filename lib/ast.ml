@@ -4,14 +4,21 @@ type typedVariable = TypedVariable of (string * string)
 (* TODO: Add match statements *)
 type expression
 = Application of (expression * expression)
-| Identifier of string
+| Variable of string
+| Match of expression * (pattern list)
+type pattern
+= Constructor of (expression * (expression list) option)
+| Function of (string * string)
+| Matchee of (expression * expression option * expression)
 type equality
 = Equality of (expression * expression)
 type hint
 = Axiom
+| Induction of string
 
 type declaration
 = ProofDeclaration of (string * typedVariable list * equality * hint option)
+| DefinitionDeclaration of (pattern * expression)
 
 
 (* type expression =

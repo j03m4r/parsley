@@ -30,6 +30,7 @@ equality:
 | lhs = expression ; EQUAL ; rhs = expression { Equality (lhs, rhs) }
 hint:
 | HINT ; AXIOM ; ENDCOMMENT { Axiom }
+| HINT ; INDUCTION ; EN
 expression:
 | LPAREN ; e = expression_with_commas ; RPAREN { e }
 | lhs = expression ; arg = IDENT { Application (lhs, Identifier arg) }

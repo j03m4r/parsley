@@ -22,6 +22,8 @@ let (*prove*) cf_inv_property (h : int)
  = (cf (inv (cf (inv h))) = cf h)
 (* no hints! *)
 
+let (*prove*) something = foo (bar z) (bar z)
+
 (* Output should read something like this:
   Proof of cf_inv_property:
    cf (inv (cf (inv h)))

@@ -2,8 +2,6 @@ type list = (* To simplify parsing, each variant starts with | *)
   | Nil
   | Cons of (int * list)
 
-(* Definitions always start with let rec,
-   variables in patterns always have type annotations: *)
 let rec append (l1 : list) (l2 : list) : list =
   match l1 with
   | Nil -> l2

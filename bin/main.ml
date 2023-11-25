@@ -3,6 +3,7 @@
    Names may vary, but these are the things this executable needs.
    In any case, these four definitions should be the only things you need to change. *)
    let string_of_declaration = Parsley.string_of_declaration
+   let prove_simple = Parsley.produce_output_simple
    let mainParser = Parsley.Parser.main
    let mainLexer = Parsley.Lexer.token
    module Parser : (sig exception Error end) = Parsley.Parser
@@ -92,7 +93,8 @@
       Note that "Arg.String" takes a function of type: string -> unit.
       This is where we plug in the 'with_file' function we wrote above. *)
    let speclist =
-     [("--printback", Arg.String (with_file print_all), "Print the parsed file back out")]
+     [("--printback", Arg.String (with_file print_all), "Print the parsed file back out");
+     ("--simple", Arg.String (with_file prove_simple), "Generate simple proofs")]
    
    let _ = Arg.parse
               speclist

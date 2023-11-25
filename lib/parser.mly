@@ -9,7 +9,12 @@
 %start main
 %type <declaration list> main
 
+%start expression_eof
+%type <expression> expression_eof
+
 %%
+expression_eof:
+| e = simpleexpression ; EOF {e}
 
 main:
   | list(declaration) ; EOF { $1 }
@@ -23,12 +28,12 @@ pattern:
   | VERTBAR ; name = VAR ; ARROW ; expression = expression { Matchee (name, None, expression) }
   | VERTBAR ; name = VAR { Constructor (name, None) }
 equality:
-  | LPAREN ; left = expression ; EQUALS ; right = expression RPAREN { Equality (left, right) }
+  | LPAREN ; left = expression ; EQUALS ; right = expression ; RPAREN { Equality (left, right) }
 expression:
+  | LPAREN ; expr = expression ; RPAREN { expr }
   | MATCH ; matchVar = VAR ; WITH ; matches = list(pattern) { Match (matchVar, matches) }
   | func = expression ; arg = VAR { Application (func, Variable arg) }
-  | func = expression ; LPAREN ; args = separated_nonempty_list(COMMA, expression) ; RPAREN { Application (func, Tuple args) }
-  | LPAREN ; var = VAR ; RPAREN { Variable var }
+  | func = expression ; LPAREN ; args = separated_nonempty_list(COMMA, expression) ; RPAREN { Application (func, Tuple (args)) }
   | var = VAR { Variable var }
 hint:
   | HINT ; AXIOM ; ENDCOMMENT { Axiom }
@@ -37,3 +42,9 @@ parameter:
   | LPAREN ; var = VAR ; COLON ; varType = VAR ; RPAREN { Parameter (var, varType) }
 strings:
   | name = VAR { name }
+
+
+simpleexpression:
+  | func = simpleexpression ; arg = VAR { Application (func, Variable arg) }
+  | func = simpleexpression ; LPAREN ; arg = simpleexpression ; RPAREN { Application (func, arg) }
+  | var = VAR { Variable var }

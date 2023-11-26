@@ -28,12 +28,13 @@ pattern:
   | VERTBAR ; name = VAR ; ARROW ; expression = expression { Matchee (name, None, expression) }
   | VERTBAR ; name = VAR { Constructor (name, None) }
 equality:
-  | LPAREN ; left = expression ; EQUALS ; right = expression ; RPAREN { Equality (left, right) }
+  | LPAREN ; equality = equality ; RPAREN { equality }
+  | left = expression ; EQUALS ; right = expression { Equality (left, right) }
 expression:
-  | LPAREN ; expr = expression ; RPAREN { expr }
-  | MATCH ; matchVar = VAR ; WITH ; matches = list(pattern) { Match (matchVar, matches) }
+  | LPAREN ; e = expression_with_commas ; RPAREN { e }
   | func = expression ; arg = VAR { Application (func, Variable arg) }
-  | func = expression ; LPAREN ; args = separated_nonempty_list(COMMA, expression) ; RPAREN { Application (func, Tuple (args)) }
+  | func = expression ; LPAREN ; arg = expression_with_commas ; RPAREN { Application (func, arg) }
+  | MATCH ; matchVar = VAR ; WITH ; matches = list(pattern) { Match (matchVar, matches) }
   | var = VAR { Variable var }
 hint:
   | HINT ; AXIOM ; ENDCOMMENT { Axiom }
@@ -42,6 +43,16 @@ parameter:
   | LPAREN ; var = VAR ; COLON ; varType = VAR ; RPAREN { Parameter (var, varType) }
 strings:
   | name = VAR { name }
+
+// these aren't in the gettingstarted.ml syntax,
+// but here's a suggestion to deal with these anyways.
+// We're using that "," is not a valid identifier
+// We're using it as an identifier that stands for the function (fun x y -> (x, y))
+// This also means we're representing (x,y,z) and ((x,y),z) as the same thing.
+expression_with_commas:
+| e = expression { e }
+| e1 = expression_with_commas ; COMMA ; e2 = expression
+  { Application (Application (Variable ",", e1), e2)}
 
 
 simpleexpression:

@@ -1,7 +1,6 @@
 type parameter = Parameter of string * string
 type expression =
   | Application of expression * expression
-  | Tuple of expression list
   | Variable of string
   | Match of string * (pattern list)
 and pattern = 

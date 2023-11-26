@@ -44,19 +44,15 @@ let parse_expression (s : string) : expression =
 
 let string_of_parameter (parameter : parameter) =
   match parameter with
-  | Parameter ((var : string), (varType : string)) -> " (" ^ var ^ " : " ^ varType ^ ")"
+  | Parameter ((var : string), (varType : string)) -> "(" ^ var ^ " : " ^ varType ^ ")"
 
 let rec string_of_expression (expr : expression) =
   match expr with
     | Variable x -> x
-    | Application ((func : expression), (var : expression)) -> string_of_expression func ^ " " ^ string_of_expression var 
-    | Tuple (vars : expression list) -> begin
-      let lstLen = List.length vars in
-      "(" ^ let rec string_of_exprs (exprs : expression list) (count : int) = 
-        match exprs with
-        | [] -> ""
-        | h::tl -> string_of_expression h ^ (if count!=lstLen then ", " else "") ^ string_of_exprs tl (count+1)
-      in string_of_exprs vars 1 ^ ")"
+    | Application ((func : expression), (var : expression)) -> begin
+      match func with
+      | Variable x -> if x="," then "(" ^ string_of_expression var ^ ")," else x ^ "(" ^ string_of_expression var ^ ")"
+      | _ -> string_of_expression func ^ " (" ^ string_of_expression var ^ ")"
     end
     | Match ((var : string), (matches : pattern list)) -> "match " ^ var ^ " with " ^ (
       let rec helper (patterns : pattern list) = 

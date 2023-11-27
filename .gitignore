@@ -1,0 +1,71 @@
+# oasis generated files
+setup.data
+setup.log
+
+# Dune generated files
+*.install
+
+# === OCaml ===
+*.cm[ioax]
+*.cmx[as]
+*.cmt
+*.cmti
+*.annot
+*.o
+*.a
+*.opam-switch
+*.aux
+*.log
+*.cache
+.dune/
+_build/
+.duniverse/
+
+# === Editor files ===
+*~
+.*.swp
+.*.swo
+.vscode/
+.idea/
+*.iml
+*.sublime-*
+
+# === OS generated files ===
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# === Executables ===
+*.native
+*.byte
+*.exe
+*.out
+
+# === Dependency directories ===
+node_modules/
+_vendor/
+
+# === Custom ===
+# Add any other files or directories you want to ignore in your workflow
+# e.g. environment variables, test outputs, etc.
+.env
+.env.local
+.env.*.local
+*.log
+scratch.txt
+
+# === Merlin ===
+.merlin
+.bisect/
+_coverage/
+
+# === OPAM ===
+.opam/
+_opam/
+
+# === Esy ===
+.esy/

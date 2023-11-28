@@ -120,7 +120,7 @@ let string_of_variables (variables : string list) =
   let rec helper variables =
     match variables with
     | [] -> "]"
-    | h :: tl -> h ^ "; " ^ helper tl
+    | h :: tl -> h ^ ";" ^ helper tl
   in "[" ^ helper variables
 
 let rec string_of_equalities eqs =
@@ -149,10 +149,22 @@ let rec func_in (expr : expression) (targ : expression) =
   | Application (expr, _) -> func_in expr targ
   | _ -> false
 
+let rec same_base_func (expr1 : expression) (expr2 : expression) =
+  match (expr1, expr2) with
+  | (Variable x1, Variable x2) -> x1=x2
+  | (Application (func1, _), Application (func2, _)) -> same_base_func func1 func2
+  | _ -> false
+
 let rec attempt_substitution (variable : string) (expr1 : expression) (expr2 : expression) = 
+  (* print_endline ("variable: " ^ variable ^ " attempting rewrite " ^ string_of_expression expr2 ^ " with " ^ string_of_expression expr1); *)
+  if expr1=expr2 then Some (Singleton (variable, Variable variable)) else
   match (expr1, expr2) with
   | (Variable x, expr2) -> if (x=variable) then Some (Singleton (x, expr2)) else None
-  | (Application (func1, arg1), Application (func2, arg2)) -> if func1=func2 then attempt_substitution variable arg1 arg2 else attempt_substitution variable expr1 arg2
+  | (Application (func1, arg1), Application (func2, Application (func3, arg2))) -> if func1=func2 then attempt_substitution variable arg1 (Application (func3, arg2)) else (let attempt = attempt_substitution variable expr1 (Application (func3, arg2)) in if attempt=None then attempt_substitution variable func1 (Application (func3, arg2)) else attempt)
+  | (Application (func1, Variable x1), Application (func2, Variable x2)) -> if func1=func2 then attempt_substitution variable (Variable x1) (Variable x2) else (let attempt = attempt_substitution variable expr1 func2 in if attempt=None then attempt_substitution variable func1 func2 else (
+    (* if x1=variable&&same_base_func func1 func2 then Some (Singleton (variable, Variable x2)) else attempt *)
+    attempt
+    ))
   | _ -> None
   
 let rec generate_substitutions (subst_lst : substitution list) (variables : string list) (constants : expression) (applications : expression) = 
@@ -169,6 +181,11 @@ let rec decompose_substs (substs : (substitution option) list) (acc : substituti
   | (Some subst)::tl -> decompose_substs tl (subst::acc)
   | None::tl -> decompose_substs tl acc
       
+(* 
+  Function to generate substitutions. There will be at most n substitutions where n is the number of variables in the variables list.
+  IF there is a sub-expression in "applications" expression (expression attempting to rewrite) that when substituted in for the respective variable in the "constants" 
+  expression equals the "applications" expression, then create a substitution that maps the respective variable to that sub-expression
+*)
 let match_expression (variables : string list) (constants : expression) (applications : expression) =
   (* let substs = generate_substitutions [] variables constants applications
   in
@@ -184,7 +201,8 @@ let rec substitute (subst : substitution) (rhs : expression) =
     | Empty -> rhs
     | Singleton (x, expr) -> (
       if ((Variable x) = arg) then Application (func, expr)
-      else (let arg = substitute (Singleton (x, expr)) arg in Application (func, arg))
+      else (let arg = substitute (Singleton (x, expr)) arg in 
+      let func = substitute (Singleton (x, expr)) func in Application (func, arg))
     )
   end
   | Variable x1 -> begin
@@ -198,19 +216,43 @@ let rec substitute (subst : substitution) (rhs : expression) =
   | _ -> rhs
 
 let rec fix_subst (orig : expression) (lhs : expression) (cur : expression) =
+  (* print_endline ("original: " ^ string_of_expression orig ^ " lhs: " ^ string_of_expression lhs ^ " cur: " ^ string_of_expression cur); *)
   match orig with
   | Variable _ -> cur
-  | Application (func, arg) -> if (Application (func, arg) = lhs) then cur else Application (func, fix_subst arg lhs cur)
+  | Application (func, Application (innerfunc, arg)) -> if (Application (func, Application (innerfunc, arg)) = lhs) then cur else Application (func, fix_subst (Application (innerfunc, arg)) lhs cur)
+  | Application (func, Variable x) -> if (Application (func, Variable x) = lhs) then cur else Application (fix_subst func lhs cur, Variable x)
   | _ -> cur
 
+(* 
+  Given an equality generate a list of substitutions and apply these substitutions to the rhs of the equality. However, this is
+  problematic because you might lose some of the outside of the original expr so fix the substitution by reapplying the everything
+  in the original expression before where the substitution begins. 
+
+  Ex.
+  match_expr [h] (cf (inv (h))) (inv (cf (cf (inv (h)))))
+  >>
+  [subst: h -> h]
+  >>
+  let res = substitute (h -> h) inv (cf (h))
+  >>
+  res = inv (cf (h))       but, inv (cf (h)) != inv (cf (inv (cf (h)))), which is what we want out of this substitution
+  >>
+  lhs = substitute (h -> h) cf (inv (h))
+  >>
+  lhs = cf (inv (h))
+  >> 
+  res = fix_subst (inv (cf (cf (inv (h))))) (cf (inv (h))) (inv (cf (h)))
+  >>
+  res = inv (cf (inv (cf (h)))) which is what we want
+*)
 let attempt_rewrite (variables : string list) (Equality (lhs, rhs) : equality) (expr : expression) =
   (* print_endline (string_of_variables variables ^ " rewriting " ^ string_of_expression expr ^ " ::::: equality at hand: " ^ string_of_equality  (Equality (lhs, rhs)));  *)
   let res = match_expression variables lhs expr in
   let rec helper lst expr =
     match lst with
     | [] -> expr
-    | h::tl -> let res = substitute h rhs in (let lhs = substitute h lhs in (let thing = fix_subst expr lhs res in helper tl thing))
-  in helper res expr
+    | h::tl -> let res = substitute h rhs in (let lhs = substitute h lhs in (let res = fix_subst expr lhs res in helper tl res))
+  in helper res expr (* fix all of the substitution erros after finishing substitution *)
   
 let rec tryEqualities eq_lst (expr : expression) =
   match eq_lst with
@@ -223,30 +265,69 @@ let rec tryEqualities eq_lst (expr : expression) =
   end
 
 let rec performSteps equalities (expr : expression) =
+  (* (print_endline ("\n\nstarting " ^ string_of_expression expr ^ " # of equalities: " ^ string_of_int (List.length equalities))); *)
   match tryEqualities equalities expr with
   | None -> []
   | Some (nm, expr) -> (nm, expr) :: performSteps equalities expr
 
-let rec steps_to_string (steps : (string * expression) list) =
+let rec steps_to_string (steps : (string * expression) list) (rev : bool) =
   match steps with
   | [] -> []
-  | ((nm : string), (expr : expression)) :: tl -> ("= { " ^ nm ^ " )\n" ^ string_of_expression expr) :: steps_to_string tl
+  | ((nm : string), (expr : expression)) :: tl -> if rev then (string_of_expression expr ^ "\n= { " ^ nm ^ " )") :: steps_to_string tl rev else ("= { " ^ nm ^ " )\n" ^ string_of_expression expr) :: steps_to_string tl rev
 
 let rec get_variables (parameters : parameter list) : string list =
   match parameters with
   | [] -> []
   | Parameter (var, _) :: tl -> var :: get_variables tl
- 
+
+let rec get_common_step lhs_steps rhs_steps =
+  match lhs_steps with
+  | [] -> None
+  | (h : (string * expression)) :: tl -> (
+    let rec contains rhs_steps step =
+      match rhs_steps with
+      | [] -> false
+      | h :: tl -> if h=step then true else contains tl step
+    in let is_common_step = contains rhs_steps h in
+    if is_common_step then Some h else get_common_step tl rhs_steps
+  )
+
+let rec combine_steps_until_common steps (c_nm, expr1) =
+  match steps with
+  | [] -> []
+  | ((nm, expr2) : (string * expression)) :: tl -> if nm!=c_nm then (nm,expr2)::(combine_steps_until_common tl (c_nm, expr1)) else []
+
+let string_of_step ((nm, expr) : (string * expression)) =
+  "STEPPPPP: ={ " ^ nm ^ " }\n" ^ string_of_expression expr
+
+let rec print_steps (steps : (string*expression) list) =
+  match steps with
+  | [] -> ()
+  | h :: tl -> print_endline (string_of_step h); print_steps tl
+
+let consolidate_steps eqs lhs rhs =
+  let lhs_steps = performSteps eqs lhs in
+  let rhs_steps = performSteps eqs rhs in
+  if List.length rhs_steps = 0 && List.length lhs_steps != 0 then string_of_expression lhs :: steps_to_string lhs_steps false else
+  let common_step = get_common_step lhs_steps rhs_steps in
+  match common_step with
+  | None -> (string_of_expression lhs :: steps_to_string lhs_steps false @ ["= { ??? }"] @ steps_to_string rhs_steps true @ [string_of_expression rhs])
+  | Some (nm, expr) -> (
+    let lhs_steps = combine_steps_until_common lhs_steps (nm, expr) in
+    let rhs_steps = combine_steps_until_common rhs_steps (nm, expr) in
+    (string_of_expression lhs :: steps_to_string lhs_steps false @ steps_to_string [(nm,expr)] false @ ["= { " ^ nm ^ " }"] @ steps_to_string rhs_steps true @ [string_of_expression rhs])
+  )
+
 let rec proofs_of_simple eqs (lst : declaration list) =
   match lst with
   | [] -> []
   | Prove ((funcName : string), (parameters : parameter list), (Equality (lhs, rhs) : equality), (hint : hint option)) :: decls -> 
     let variables = get_variables parameters in
     (match hint with
-    | None -> (("Proof of " ^ funcName ^ ": ") :: (string_of_expression lhs :: steps_to_string (performSteps eqs lhs))) :: (proofs_of_simple ((funcName, variables, lhs, rhs) :: eqs) decls)
+    | None -> (("Proof of " ^ funcName ^ ": ") :: (consolidate_steps eqs lhs rhs)) :: (proofs_of_simple ((funcName, variables, lhs, rhs) :: eqs) decls)
     | _ -> proofs_of_simple ((funcName, variables, lhs, rhs) :: eqs) decls)
   | _ :: decls -> proofs_of_simple eqs decls
 
 let produce_output_simple (lst : declaration list)
-  = print_endline (String.concat "\n\n" (List.map (String.concat "\n") 
+  = print_endline (String.concat "\n\n" (List.map (String.concat "\n")
   (proofs_of_simple [] lst)))

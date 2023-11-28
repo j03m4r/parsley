@@ -23,10 +23,11 @@ declaration:
   | LET ; funcName = VAR ; parameters = list(parameter) ; COLON ; funcType = VAR ; EQUALS ; expression = expression { Definition (funcName, parameters, expression, funcType) }
   | TYPE ; name = VAR ; EQUALS ; constructors = list(pattern) { Variant (name, constructors) }
 pattern:
-  | VERTBAR ; name = VAR ; OF ; LPAREN ; params = separated_nonempty_list(STAR, strings) ; RPAREN { Constructor (name, Some params) }
+  | VERTBAR ; name = VAR ; params = option(constructorparams) { Constructor (name, params) }
   | VERTBAR ; name = VAR ; LPAREN ; params = option(separated_nonempty_list(COMMA, parameter)) ; RPAREN ; ARROW ; expression = expression { Matchee (name, params, expression) }
   | VERTBAR ; name = VAR ; ARROW ; expression = expression { Matchee (name, None, expression) }
-  | VERTBAR ; name = VAR { Constructor (name, None) }
+constructorparams:
+  | OF ; LPAREN ; params = separated_nonempty_list(STAR, strings) ; RPAREN { params }
 equality:
   | LPAREN ; equality = equality ; RPAREN { equality }
   | left = expression ; EQUALS ; right = expression { Equality (left, right) }
@@ -43,12 +44,6 @@ parameter:
   | LPAREN ; var = VAR ; COLON ; varType = VAR ; RPAREN { Parameter (var, varType) }
 strings:
   | name = VAR { name }
-
-// these aren't in the gettingstarted.ml syntax,
-// but here's a suggestion to deal with these anyways.
-// We're using that "," is not a valid identifier
-// We're using it as an identifier that stands for the function (fun x y -> (x, y))
-// This also means we're representing (x,y,z) and ((x,y),z) as the same thing.
 expression_with_commas:
 | e = expression { e }
 | e1 = expression_with_commas ; COMMA ; e2 = expression

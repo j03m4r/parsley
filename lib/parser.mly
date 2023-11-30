@@ -1,40 +1,82 @@
 %{
   open Ast
 %}
-
-%token <string> VAR
-%token LPAREN RPAREN COMMA EOF COLON STAR ARROW
-%token LET EQUALS PROVE AXIOM INDUCTION TYPE VERTBAR OF MATCH WITH
-
+%token <string> IDENT
+%token COLON
+%token LPAREN
+%token RPAREN
+%token PROVE
+%token LET
+%token REC
+%token EQUAL
+%token MATCH
+%token WITH
+%token BAR
+%token ARROW
+%token OF
+%token STAR
+%token EOF
+%token HINT
+%token TYPE
+%token COMMA
+%token INDUCTION
+%token ENDCOMMENT /* there is no startcomment, as it's called "hint", and proper comments are ignored by the lexer */
+%token AXIOM
 %start main
+%start expression_eof
+%type <expression> expression_eof
 %type <declaration list> main
-
 %%
 
 main:
-  | declaration1 = declaration ; declaration2 = main { declaration1 :: declaration2 }
-  | declaration = declaration ; EOF { declaration :: [] }
+| list(declaration) EOF { $1 }
 declaration:
-  | PROVE ; expression = expression ; EQUALS ; equality = equality ; AXIOM { Prove (expression, equality, Axiom) }
-  | PROVE ; expression = expression ; EQUALS ; equality = equality ; INDUCTION ; var = VAR { Prove (expression, equality, Induction var) }
-  | PROVE ; expression = expression ; EQUALS ; equality = equality ; { Prove (expression, equality, Nil) }
-  | LET ; pattern = pattern ; EQUALS ; expression = expression { Definition (pattern, expression) }
-  | TYPE ; name = VAR ; EQUALS ; VERTBAR ; constructors = separated_nonempty_list(VERTBAR, pattern) { Variant (name, constructors) }
-pattern:
-  | expression = expression ; COLON ; funcType = VAR { Function (expression, funcType) }
-  | name = expression ; { Constructor (name, None) }
-  | name = expression ; OF ; LPAREN ; params = separated_nonempty_list(STAR, expression) ; RPAREN { Constructor (name, Some params) }
+| LET ; PROVE ; lemma_name=IDENT ; args = list(argument) ; EQUAL ; eq = equality ; hint=option(hint)
+   { ProofDeclaration (lemma_name, args, eq, hint) }
+| LET ; REC ; nm = IDENT ; args = list(argument) ; COLON ; t = IDENT ; EQUAL ; e = expression_or_match { FunctionDeclaration (TypedVariable (nm,t), args, e) }
+| TYPE ; nm = IDENT ; EQUAL ; option(BAR); t = separated_nonempty_list(BAR,variant)  { TypeDeclaration (nm, t) }
+argument:
+| nm = IDENT; COLON; t = IDENT { TypedVariable (nm, t) }
+| LPAREN ; arg = argument; RPAREN { arg }
 equality:
-  | LPAREN ; left = expression ; EQUALS ; right = expression RPAREN { Equality (left, right) }
+| LPAREN ; e = equality ; RPAREN { e }
+| lhs = expression ; EQUAL ; rhs = expression { Equality (lhs, rhs) }
+// some groups have been writing (*hint : axiom *) instead of (*hint: axiom *)
+// I decided I should just allow that so this parser parses the colon separately now:
+hint:
+| HINT ; COLON; AXIOM ; ENDCOMMENT { Axiom }
+| HINT ; COLON; INDUCTION ; nm = IDENT ; ENDCOMMENT { Induction nm }
 expression:
-  | MATCH ; matchVar = expression ; WITH ; VERTBAR ; matches = separated_nonempty_list(VERTBAR, matchee) { Match (matchVar, matches) }
-  | func = expression ; param = parameter { Application (func, param) }
-  | func = expression ; arg = VAR { Application (func, Variable arg) }
-  | func = expression ; LPAREN ; args = separated_nonempty_list(COMMA, expression) ; RPAREN { Application (func, Tuple args) }
-  | var = VAR { Variable var }
-  | LPAREN ; var = VAR ; RPAREN { Variable var }
-matchee:
-  | name = expression ; ARROW ; expression = expression { Matchee (name, None, expression) }
-  | name = expression ; LPAREN ; params = separated_nonempty_list(COMMA, parameter) ; RPAREN ; ARROW ; expression = expression { Matchee (name, Some (Tuple params), expression) }
-parameter:
-  | LPAREN ; var = VAR ; COLON ; varType = VAR ; RPAREN { Parameter (var, varType) }
+| LPAREN ; e = expression_with_commas ; RPAREN { e }
+| lhs = expression ; arg = IDENT { Application (lhs, Identifier arg) }
+| lhs = expression ; LPAREN ; arg = expression_with_commas ; RPAREN
+   { Application (lhs, arg) }
+| nm = IDENT { Identifier nm }
+
+// for expression_with_commas, we're using that "," is not a valid identifier
+// We're using it as an identifier that stands for the function (fun x y -> (x, y))
+// This also means we're representing (x,y,z) and ((x,y),z) as the same thing.
+expression_with_commas:
+| e = expression { e }
+| e1 = expression_with_commas ; COMMA ; e2 = expression
+  { Application (Application (Identifier ",", e1), e2)}
+
+// this is for the type declarations, which are like: type t = A | B of (int * int)
+variant:
+| nm = IDENT { Variant(nm,[]) }
+| nm = IDENT; OF; LPAREN ; args = separated_nonempty_list(STAR, IDENT); RPAREN { Variant(nm,args) }
+// the version without the parentheses isn't really used, but it's allowed
+| nm = IDENT; OF ; args = separated_nonempty_list(STAR, IDENT) { Variant(nm,args) }
+
+expression_eof:
+| e = expression_or_match ; EOF {e}
+expression_or_match:
+| e = expression { e }
+| MATCH ; e = expression ; WITH ; option(BAR) ; cases = separated_nonempty_list(BAR,case) { Match (e, cases) }
+case:
+| pattern = pattern ; ARROW ; expr = expression { (pattern, expr) }
+pattern:
+| LPAREN ; p = pattern ; RPAREN { p }
+| nm = IDENT { Constructor (nm, []) }
+| nm = IDENT ; LPAREN ; args = separated_list(COMMA,pattern) ; RPAREN { Constructor (nm, args) }
+| nm = IDENT ; COLON ; t = IDENT { Variable (nm,t) }

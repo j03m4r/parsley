@@ -1,6 +1,4 @@
-(menhir (modules parser))
-
-(ocamllex lexer)
-
 (library
- (name parsley))
+ (name procaml))
+(ocamllex lexer)
+(menhir (modules parser))

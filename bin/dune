@@ -1,4 +1,4 @@
 (executable
- (public_name parsley)
+ (public_name procaml)
  (name main)
- (libraries parsley))
+ (libraries procaml))

@@ -1,20 +1,31 @@
-type expression =
-  | Application of expression * expression
-  | Tuple of expression list
-  | Variable of string
-  | Parameter of string * string
-  | Match of expression * (pattern list)
-and pattern = 
-  | Constructor of expression * ((expression list) option)
-  | Function of expression * string
-  | Matchee of expression * expression option * expression
-and equality =
-  | Equality of expression * expression
-and hint =
-  | Axiom
+type typevariant = Variant of (string * string list)
+type typedVariable = TypedVariable of (string * string) (* for example: (x : list) *)
+let typedVariableVariable (TypedVariable (id, _)) = id
+
+type pattern
+= Constructor of (string * pattern list) (* constructor name, arguments *)
+| Variable of (string * string) (* variable name, type name *)
+
+type expression
+ = Application of (expression * expression)
+ | Identifier of string
+ | Match of (expression * (pattern * expression) list)
+type equality
+ = Equality of (expression * expression)
+
+type hint
+  = Axiom
   | Induction of string
-  | Nil
-and declaration =
-  | Prove of expression * equality * hint
-  | Definition of pattern * expression
-  | Variant of string * pattern list
+ 
+type declaration
+   = TypeDeclaration of (string * typevariant list)
+   | FunctionDeclaration of (typedVariable * typedVariable list * expression)
+   | ProofDeclaration of (string * typedVariable list * equality * hint option)
+ 
+let rec pattern_variables (pattern : pattern) : string list=
+   match pattern with
+   | Constructor (_, patterns) ->
+       List.fold_left (fun acc pattern ->
+           pattern_variables pattern @ acc) [] patterns
+   | Variable (id, _) -> [id]
+

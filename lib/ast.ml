@@ -28,4 +28,3 @@ let rec pattern_variables (pattern : pattern) : string list=
        List.fold_left (fun acc pattern ->
            pattern_variables pattern @ acc) [] patterns
    | Variable (id, _) -> [id]
-

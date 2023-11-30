@@ -9,6 +9,7 @@ let parse (s : string) : expression =
      ast
 
 let string_of_declaration = String_of.string_of_declaration
+let string_of_expression = String_of.string_of_expression
 
 let empty = []
 let singleton x y = [(x,y)]
@@ -121,9 +122,11 @@ let rec prover rules declarations =
          | ProofDeclaration (nm, vars, Equality (lhs,rhs), None) :: rest
             -> (* no hint, so let's prove this *)
                prove rules lhs rhs :: prover ((List.map typedVariableVariable vars,nm,lhs,rhs)::rules) rest
-         | ProofDeclaration (nm, vars, Equality (lhs,rhs), _) :: rest
+         | ProofDeclaration (nm, vars, Equality (lhs,rhs), Some hint) :: rest
             -> (* we got a hint so we simply assume the statement *)
-               prover ((List.map typedVariableVariable vars,nm,lhs,rhs)::rules) rest
+              (match hint with 
+              | Axiom -> prover ((List.map typedVariableVariable vars,nm,lhs,rhs)::rules) rest
+              | Induction x -> [string_of_expression lhs; "= { induction " ^ x ^ " }"; string_of_expression rhs] :: prover ((["idk"], "big induction", Identifier "lhs", Identifier "rhs") :: rules) rest)
          | _ :: rest -> prover rules rest
          | [] -> []
    let prover_main decls =

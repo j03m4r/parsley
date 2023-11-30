@@ -161,19 +161,16 @@ let rec attempt_substitution (variable : string) (expr1 : expression) (expr2 : e
   match (expr1, expr2) with
   | (Variable x, expr2) -> if (x=variable) then Some (Singleton (x, expr2)) else None
   | (Application (func1, arg1), Application (func2, Application (func3, arg2))) -> if func1=func2 then attempt_substitution variable arg1 (Application (func3, arg2)) else (let attempt = attempt_substitution variable expr1 (Application (func3, arg2)) in if attempt=None then attempt_substitution variable func1 (Application (func3, arg2)) else attempt)
-  | (Application (func1, Variable x1), Application (func2, Variable x2)) -> if func1=func2 then attempt_substitution variable (Variable x1) (Variable x2) else (let attempt = attempt_substitution variable expr1 func2 in if attempt=None then attempt_substitution variable func1 func2 else (
-    (* if x1=variable&&same_base_func func1 func2 then Some (Singleton (variable, Variable x2)) else attempt *)
-    attempt
-    ))
+  | (Application (func1, Variable x1), Application (func2, Variable x2)) -> if func1=func2 then attempt_substitution variable (Variable x1) (Variable x2) else (let attempt = attempt_substitution variable expr1 func2 in if attempt=None then attempt_substitution variable func1 func2 else attempt)
   | _ -> None
   
-let rec generate_substitutions (subst_lst : substitution list) (variables : string list) (constants : expression) (applications : expression) = 
+let rec generate_substitutions (subst_lst : substitution list) (variables : string list) (lhs : expression) (expr : expression) = 
   match variables with
   | [] -> subst_lst
-  | h::tl -> let subst = attempt_substitution h constants applications in (
+  | h::tl -> let subst = attempt_substitution h lhs expr in (
     match subst with
-    | Some x -> generate_substitutions (x::subst_lst) tl constants applications
-    | None -> generate_substitutions subst_lst tl constants applications
+    | Some x -> generate_substitutions (x::subst_lst) tl lhs expr
+    | None -> generate_substitutions subst_lst tl lhs expr
     )
 let rec decompose_substs (substs : (substitution option) list) (acc : substitution list) =
   match substs with
@@ -248,11 +245,11 @@ let rec fix_subst (orig : expression) (lhs : expression) (cur : expression) =
 let attempt_rewrite (variables : string list) (Equality (lhs, rhs) : equality) (expr : expression) =
   (* print_endline (string_of_variables variables ^ " rewriting " ^ string_of_expression expr ^ " ::::: equality at hand: " ^ string_of_equality  (Equality (lhs, rhs)));  *)
   let res = match_expression variables lhs expr in
-  let rec helper lst expr =
+  let rec helper lst expr rhs lhs =
     match lst with
     | [] -> expr
-    | h::tl -> let res = substitute h rhs in (let lhs = substitute h lhs in (let res = fix_subst expr lhs res in helper tl res))
-  in helper res expr (* fix all of the substitution erros after finishing substitution *)
+    | h::tl -> let rhs = substitute h rhs in (print_endline ("rhs subst res: " ^ string_of_expression rhs); let lhs = substitute h lhs in (print_endline ("lhs subst res: " ^ string_of_expression lhs);let fixed = fix_subst expr lhs rhs in helper tl fixed rhs lhs))
+  in helper res expr rhs lhs
   
 let rec tryEqualities eq_lst (expr : expression) =
   match eq_lst with

@@ -136,8 +136,18 @@ let caseproof vars varnm typenm rules lhs rhs (variantnm, _variantvars) =
     prove variantrules lhs rhs @ ["This completes the proof of case "^ variantnm ^ ".";""]
 
 let inductionproof proof_name varnm _types vars rules lhs rhs =
-  let typenm = "list" (* TODO: don't hard-code the type! *) in
-  let variants = [("Cons",["int";"list"]) ; ("Nil" , [])] (* TODO: find the type in 'types' and convert it to this! *) in
+  let rec findvar (lst: typedVariable list) = match lst with
+  | [] -> failwith "variable not found"
+  | (TypedVariable (x, y)) :: rest -> if x = varnm then y else findvar rest 
+  in let typenm = findvar vars in
+  let rec findtype (lst: (string * (typevariant list)) list) = match lst with
+  | [] -> failwith "type not found"
+  | (name, typevars) :: rest -> if name = typenm then typevars else findtype rest
+  in let typedvariants = findtype _types in
+  let rec formatvariants (lst: typevariant list) = match lst with
+  | [] -> []
+  | (Variant (name, typevars)) :: rest -> (name, typevars) :: formatvariants rest
+  in let variants = formatvariants typedvariants in
   ("Proof " ^ proof_name ^ " by induction on (" ^ varnm ^ " : " ^ typenm^"):") ::
   List.(concat (map (caseproof vars varnm typenm rules lhs rhs) variants)) @
   ["This completes the proof by induction."]

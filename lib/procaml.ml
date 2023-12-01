@@ -89,20 +89,19 @@ let rec get_match expr =
   | _ -> Identifier "No Match"
  
 let attempt_apply_func (funcDefs : (string list * string * expression * expression) list) expr =
-  print_endline ("Starting attempting to apply func. declaration: "^string_of_expression expr);
   match expr with
   | Application (x, y) -> (
     match perform_step funcDefs (Application (x,y)) with
-    | Some (nm, e) -> if get_match e=(Identifier "No Match") then (print_endline ("No 1st match: trying left expr..."^string_of_expression x);
+    | Some (nm, e) -> if get_match e=(Identifier "No Match") then (
       match perform_step funcDefs x with
-      | Some (nm, e) -> if get_match e=(Identifier "No Match") then (print_endline "No 2nd match: trying right expr...";
+      | Some (nm, e) -> if get_match e=(Identifier "No Match") then (
         match perform_step funcDefs y with
-        | Some (nm, e) -> if get_match e=(Identifier "No Match") then (print_endline "No 3rd match";[]) else (nm, Application (x, e)) :: ("apply match", Application (x, get_match e)) :: []
+        | Some (nm, e) -> if get_match e=(Identifier "No Match") then ([]) else (nm, Application (x, e)) :: ("apply match", Application (x, get_match e)) :: []
         | None -> [] (* None *)
-      ) else (print_endline ("Is 2nd match: trying right expr..."^string_of_expression (Application(e,y)));(nm, Application (e, y)) :: ("apply match", Application(get_match e, y)) :: [])
+      ) else ((nm, Application (e, y)) :: ("apply match", Application(get_match e, y)) :: [])
       | None -> (
         match perform_step funcDefs y with
-        | Some (nm, e) -> if get_match e=(Identifier "No Match") then (print_endline "No 3rd match";[]) else (nm, Application (x, e)) :: ("apply match", Application (x, get_match e)) :: []
+        | Some (nm, e) -> if get_match e=(Identifier "No Match") then ([]) else (nm, Application (x, e)) :: ("apply match", Application (x, get_match e)) :: []
         | None -> [] (* None *)
       )
     ) else ((nm, e) :: ("apply match", get_match e) :: [])
@@ -171,8 +170,7 @@ let gen_ih variables lhs rhs expression =
   | Some e -> e
   | None -> failwith "Var not in ih expr"
 
-let caseproof (vars : typedVariable list) varnm typenm rules lhs rhs (funcDefs : (string list * string * expression * expression) list) (variantnm, _variantvars)  =
-  print_typedVariables vars "";
+let caseproof varnm typenm rules lhs rhs (funcDefs : (string list * string * expression * expression) list) (variantnm, _variantvars)  =
   let define_variant_namedvars typenm =
     match typenm with
     | "list" -> (match variantnm with 
@@ -204,7 +202,7 @@ let inductionproof proof_name varnm _types vars rules lhs rhs (funcDefs : (strin
   | (Variant (name, typevars)) :: rest -> (name, typevars) :: formatvariants rest
   in let variants = formatvariants typedvariants in
   ("Proof " ^ proof_name ^ " by induction on (" ^ varnm ^ " : " ^ typenm^"):") ::
-  List.(concat (map (caseproof vars varnm typenm rules lhs rhs funcDefs) variants)) @
+  List.(concat (map (caseproof varnm typenm rules lhs rhs funcDefs) variants)) @
   ["This completes the proof by induction."]
 
 let rec create_funcDef vars expr =

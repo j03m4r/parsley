@@ -78,25 +78,46 @@ let rec mkConstructorApp expr (variantvars : pattern list) = match variantvars w
     Application (expr, mkConstructorApp (Application (Identifier ",", Identifier var)) rest)
   | _ -> expr
 
-let get_match expr =
+let rec get_match expr =
   let rec get_expr pe_list var =
     match pe_list with
     | (Constructor (nm, vars), e) :: tl -> if (mkConstructorApp (Identifier nm) vars)=var then e else get_expr tl var
-    | _ -> Identifier "Never going to happen"
+    | _ -> Identifier "No Match"
   in match expr with
   | Match (var, pe_list) -> get_expr pe_list var
-  | _ -> Identifier "what"
+  | Application (x, y) -> let x' = get_match x in if x'!=(Identifier "No Match") then Application(x', y) else let y' = get_match y in if y'!=(Identifier "No Match") then Application (x, y') else Identifier "No Match"
+  | _ -> Identifier "No Match"
  
 let attempt_apply_func (funcDefs : (string list * string * expression * expression) list) expr =
-  let res = match perform_step funcDefs expr with
+  print_endline ("Starting attempting to apply func. declaration: "^string_of_expression expr);
+  match expr with
+  | Application (x, y) -> (
+    match perform_step funcDefs (Application (x,y)) with
+    | Some (nm, e) -> if get_match e=(Identifier "No Match") then (print_endline ("No 1st match: trying left expr..."^string_of_expression x);
+      match perform_step funcDefs x with
+      | Some (nm, e) -> if get_match e=(Identifier "No Match") then (print_endline "No 2nd match: trying right expr...";
+        match perform_step funcDefs y with
+        | Some (nm, e) -> if get_match e=(Identifier "No Match") then (print_endline "No 3rd match";[]) else (nm, Application (x, e)) :: ("apply match", Application (x, get_match e)) :: []
+        | None -> [] (* None *)
+      ) else (print_endline ("Is 2nd match: trying right expr..."^string_of_expression (Application(e,y)));(nm, Application (e, y)) :: ("apply match", Application(get_match e, y)) :: [])
+      | None -> (
+        match perform_step funcDefs y with
+        | Some (nm, e) -> if get_match e=(Identifier "No Match") then (print_endline "No 3rd match";[]) else (nm, Application (x, e)) :: ("apply match", Application (x, get_match e)) :: []
+        | None -> [] (* None *)
+      )
+    ) else ((nm, e) :: ("apply match", get_match e) :: [])
+    | None -> []
+  )
+  | _ -> []
+  (* let res = match perform_step funcDefs expr with
   | Some (nm, e) -> (nm, e) :: ("apply match", get_match e) :: []
   | None -> []
-  in res
+  in res *)
 
 let rec perform_steps rules expression (funcDefs : (string list * string * expression * expression) list)
  = match perform_step rules expression with
   | Some (nm, e) -> (nm, e) :: perform_steps rules e funcDefs
-  | None -> (match (attempt_apply_func funcDefs expression) with 
+  | None -> (match attempt_apply_func funcDefs expression with 
     | [(nm1, e1);(nm2, e2)] -> (nm1, e1) :: (nm2, e2) :: perform_steps rules e2 funcDefs
     | _ -> [])
 
@@ -151,6 +172,7 @@ let gen_ih variables lhs rhs expression =
   | None -> failwith "Var not in ih expr"
 
 let caseproof (vars : typedVariable list) varnm typenm rules lhs rhs (funcDefs : (string list * string * expression * expression) list) (variantnm, _variantvars)  =
+  print_typedVariables vars "";
   let define_variant_namedvars typenm =
     match typenm with
     | "list" -> (match variantnm with 
@@ -161,7 +183,7 @@ let caseproof (vars : typedVariable list) varnm typenm rules lhs rhs (funcDefs :
   let variant_namedvars = define_variant_namedvars typenm (* TODO: construct this from variantvars *) in
     let variant_expr = mkConstructorApp (Identifier variantnm) variant_namedvars in
     let caserule = ([], "case", Identifier varnm, variant_expr) in
-  let ihs = [([], "IH", (gen_ih [] (Identifier varnm) (Identifier "t") lhs), (gen_ih (List.map typedVariableVariable vars) (Identifier varnm) (Identifier "t") rhs))] (* TODO: generate the inductive hypotheses for all variant_namedvars that are of type typenm *) in
+  let ihs = [([], "IH", (gen_ih [] (Identifier varnm) (Identifier "t") lhs), (gen_ih [] (Identifier varnm) (Identifier "t") rhs))] (* TODO: generate the inductive hypotheses for all variant_namedvars that are of type typenm *) in
     let variantrules = caserule::ihs @ rules in
     ("Case "^ variantnm ^ ":") ::
     List.map (fun (vars, nm, lhs, rhs) -> nm ^ ": " ^ String.concat "" (List.map (fun x -> "Forall "^x^". ") vars)^

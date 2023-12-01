@@ -78,13 +78,14 @@ let rec mkConstructorApp expr (variantvars : pattern list) = match variantvars w
     Application (expr, mkConstructorApp (Application (Identifier ",", Identifier var)) rest)
   | _ -> expr
 
-let get_match (Match (var, pe_list)) =
-  let rec get_expr pe_list =
+let get_match expr =
+  let rec get_expr pe_list var =
     match pe_list with
-    | (Constructor (nm, vars), e) :: tl -> if (mkConstructorApp (Identifier nm) vars)=var then e else get_expr tl
-    | []
+    | (Constructor (nm, vars), e) :: tl -> if (mkConstructorApp (Identifier nm) vars)=var then e else get_expr tl var
     | _ -> Identifier "Never going to happen"
-  in get_expr pe_list
+  in match expr with
+  | Match (var, pe_list) -> get_expr pe_list var
+  | _ -> Identifier "what"
  
 let attempt_apply_func (funcDefs : (string list * string * expression * expression) list) expr =
   let res = match perform_step funcDefs expr with
@@ -139,16 +140,32 @@ let prove rules lhs rhs (funcDefs : (string list * string * expression * express
       List.rev (print_steps_n rhs rhs_steps (rhs_n - lhs_n))
       )
 
-let caseproof vars varnm typenm rules lhs rhs (funcDefs : (string list * string * expression * expression) list) (variantnm, _variantvars)  =
-  let _ = List.map (fun x -> x) vars in
-  print_endline typenm;
-  let variant_namedvars = vars (* TODO: construct this from variantvars *) in
+let rec print_typedVariables lst str =
+  match lst with
+  | [] -> print_endline str
+  | h::tl -> print_typedVariables tl (String_of.string_of_typedvariable h ^ "\n")
+
+let gen_ih variables lhs rhs expression =
+  match attempt_rewrite variables lhs rhs expression with
+  | Some e -> e
+  | None -> failwith "Var not in ih expr"
+
+let caseproof (vars : typedVariable list) varnm typenm rules lhs rhs (funcDefs : (string list * string * expression * expression) list) (variantnm, _variantvars)  =
+  let define_variant_namedvars typenm =
+    match typenm with
+    | "list" -> (match variantnm with 
+      | "Nil" -> []
+      | _ -> [Variable ("h", "idk"); Variable ("t", "idk")])
+    | _ -> []
+  in
+  let variant_namedvars = define_variant_namedvars typenm (* TODO: construct this from variantvars *) in
     let variant_expr = mkConstructorApp (Identifier variantnm) variant_namedvars in
     let caserule = ([], "case", Identifier varnm, variant_expr) in
-  let ihs = [] (* TODO: generate the inductive hypotheses for all variant_namedvars that are of type typenm *) in
+  let ihs = [([], "IH", (gen_ih [] (Identifier varnm) (Identifier "t") lhs), (gen_ih (List.map typedVariableVariable vars) (Identifier varnm) (Identifier "t") rhs))] (* TODO: generate the inductive hypotheses for all variant_namedvars that are of type typenm *) in
     let variantrules = caserule::ihs @ rules in
     ("Case "^ variantnm ^ ":") ::
-    List.map (fun (vars, nm, lhs, rhs) -> nm^": "^String.concat "" (List.map (fun x -> "Forall "^x^". ") vars)^String_of.string_of_expression lhs^" = "^String_of.string_of_expression rhs) ihs @
+    List.map (fun (vars, nm, lhs, rhs) -> nm ^ ": " ^ String.concat "" (List.map (fun x -> "Forall "^x^". ") vars)^
+    String_of.string_of_expression lhs^" = "^String_of.string_of_expression rhs) ihs @
     prove variantrules lhs rhs funcDefs @ ["This completes the proof of case "^ variantnm ^ ".";""]
 
 let inductionproof proof_name varnm _types vars rules lhs rhs (funcDefs : (string list * string * expression * expression) list) =

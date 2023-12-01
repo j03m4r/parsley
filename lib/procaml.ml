@@ -45,13 +45,12 @@ let rec match_expression variables pattern expression =
             | _ -> None)
     | _ -> None
 
-
 let rec substitute variables s e = match e with
     | Identifier var -> if List.mem var variables
                         then find var s
                         else e
     | Application (e1, e2) -> Application (substitute variables s e1, substitute variables s e2)
-    | _ -> e
+    | Match (var, pe_lst) -> Match (substitute variables s var, List.map (fun ((p : pattern), (e : expression)) -> (p, substitute variables s e)) pe_lst)
 
 let rec attempt_rewrite variables lhs rhs expression =
   match match_expression variables lhs expression with
@@ -72,10 +71,33 @@ let rec perform_step rules expression = match rules with
       | _ -> perform_step rest expression)
   | [] -> None
 
-let rec perform_steps rules expression
- = match perform_step rules expression with
-  | Some (nm, e) -> (nm, e) :: perform_steps rules e
+let rec mkConstructorApp expr (variantvars : pattern list) = match variantvars with
+  | [] -> expr
+  | [Variable (var, _)] -> Application (expr, Identifier var)
+  | Variable (var, _)::rest ->
+    Application (expr, mkConstructorApp (Application (Identifier ",", Identifier var)) rest)
+  | _ -> expr
+
+let get_match (Match (var, pe_list)) =
+  let rec get_expr pe_list =
+    match pe_list with
+    | (Constructor (nm, vars), e) :: tl -> if (mkConstructorApp (Identifier nm) vars)=var then e else get_expr tl
+    | []
+    | _ -> Identifier "Never going to happen"
+  in get_expr pe_list
+ 
+let attempt_apply_func (funcDefs : (string list * string * expression * expression) list) expr =
+  let res = match perform_step funcDefs expr with
+  | Some (nm, e) -> (nm, e) :: ("apply match", get_match e) :: []
   | None -> []
+  in res
+
+let rec perform_steps rules expression (funcDefs : (string list * string * expression * expression) list)
+ = match perform_step rules expression with
+  | Some (nm, e) -> (nm, e) :: perform_steps rules e funcDefs
+  | None -> (match (attempt_apply_func funcDefs expression) with 
+    | [(nm1, e1);(nm2, e2)] -> (nm1, e1) :: (nm2, e2) :: perform_steps rules e2 funcDefs
+    | _ -> [])
 
 let print_step e nm = [String_of.string_of_expression e; " = { " ^ nm ^ " }"]
 let rec print_steps_n e steps n =
@@ -101,9 +123,9 @@ let rec take_away_steps e steps n =
     take_away_steps e' rest (n-1)
   | _ -> failwith "take_away_steps: n is larger than the number of steps"
 
-let prove rules lhs rhs
-  = let lhs_steps = perform_steps rules lhs in
-    let rhs_steps = perform_steps rules rhs in
+let prove rules lhs rhs (funcDefs : (string list * string * expression * expression) list)
+  = let lhs_steps = perform_steps rules lhs funcDefs in
+    let rhs_steps = perform_steps rules rhs funcDefs in
     let lhs_n = List.length lhs_steps in
     let rhs_n = List.length rhs_steps in
     if lhs_n > rhs_n then
@@ -117,48 +139,48 @@ let prove rules lhs rhs
       List.rev (print_steps_n rhs rhs_steps (rhs_n - lhs_n))
       )
 
-let rec mkConstructorApp expr variantvars = match variantvars with
-  | [] -> expr
-  | [var, _] -> Application (expr, Identifier var)
-  | (var, _)::rest ->
-    Application (expr, mkConstructorApp (Application (Identifier ",", Identifier var)) rest)
-
-let caseproof vars varnm typenm rules lhs rhs (variantnm, _variantvars) =
+let caseproof vars varnm typenm rules lhs rhs (funcDefs : (string list * string * expression * expression) list) (variantnm, _variantvars)  =
   let _ = List.map (fun x -> x) vars in
   print_endline typenm;
-  let variant_namedvars = [("?1","int");("?2","list")] (* TODO: construct this from variantvars *) in
+  let variant_namedvars = vars (* TODO: construct this from variantvars *) in
     let variant_expr = mkConstructorApp (Identifier variantnm) variant_namedvars in
     let caserule = ([], "case", Identifier varnm, variant_expr) in
   let ihs = [] (* TODO: generate the inductive hypotheses for all variant_namedvars that are of type typenm *) in
     let variantrules = caserule::ihs @ rules in
     ("Case "^ variantnm ^ ":") ::
     List.map (fun (vars, nm, lhs, rhs) -> nm^": "^String.concat "" (List.map (fun x -> "Forall "^x^". ") vars)^String_of.string_of_expression lhs^" = "^String_of.string_of_expression rhs) ihs @
-    prove variantrules lhs rhs @ ["This completes the proof of case "^ variantnm ^ ".";""]
+    prove variantrules lhs rhs funcDefs @ ["This completes the proof of case "^ variantnm ^ ".";""]
 
-let inductionproof proof_name varnm _types vars rules lhs rhs =
+let inductionproof proof_name varnm _types vars rules lhs rhs (funcDefs : (string list * string * expression * expression) list) =
   let typenm = "list" (* TODO: don't hard-code the type! *) in
   let variants = [("Cons",["int";"list"]) ; ("Nil" , [])] (* TODO: find the type in 'types' and convert it to this! *) in
   ("Proof " ^ proof_name ^ " by induction on (" ^ varnm ^ " : " ^ typenm^"):") ::
-  List.(concat (map (caseproof vars varnm typenm rules lhs rhs) variants)) @
+  List.(concat (map (caseproof vars varnm typenm rules lhs rhs funcDefs) variants)) @
   ["This completes the proof by induction."]
+
+let rec create_funcDef vars expr =
+  match vars with
+  | [] -> Identifier "This will never happen"
+  | h :: [] -> Application(expr, Identifier h)
+  | h :: tl -> (Application (create_funcDef tl expr, Identifier h))
   
-let rec prover types rules declarations =
+let rec prover types rules (funcDefs : (string list * string * expression * expression) list) declarations =
       match declarations with
          | ProofDeclaration (nm, vars, Equality (lhs,rhs), None) :: rest
             -> (* no hint, so let's prove this *)
-               prove rules lhs rhs :: prover types ((List.map typedVariableVariable vars,nm,lhs,rhs)::rules) rest
+               (prove rules lhs rhs funcDefs) :: prover types ((List.map typedVariableVariable vars,nm,lhs,rhs)::rules) funcDefs rest
          | ProofDeclaration (nm, vars, Equality (lhs,rhs), Some hint) :: rest
             -> (* we got a hint so we simply assume the statement *)
               (match hint with 
-              | Axiom -> prover types ((List.map typedVariableVariable vars,nm,lhs,rhs)::rules) rest
-              | Induction x -> inductionproof nm x types vars rules lhs rhs :: prover types ((List.map typedVariableVariable vars,nm,lhs,rhs)::rules) rest)
+              | Axiom -> prover types ((List.map typedVariableVariable vars,nm,lhs,rhs)::rules) funcDefs rest
+              | Induction x -> (inductionproof nm x types vars rules lhs rhs funcDefs) :: prover types ((List.map typedVariableVariable vars,nm,lhs,rhs)::rules) funcDefs rest)
         | TypeDeclaration (nm, variants) :: rest -> (* add the type to the list of types and keep going *)
-          prover ((nm, variants)::types) rules rest
-        | FunctionDeclaration _ :: rest -> prover types rules rest
+          prover ((nm, variants)::types) rules funcDefs rest
+        | FunctionDeclaration (TypedVariable (nm, _), vars, def) :: rest -> let vars = List.map typedVariableVariable vars in let lhs = create_funcDef (List.rev vars) (Identifier nm) in prover types rules ((vars, ("def. of " ^ nm), lhs, def) :: funcDefs) rest
         | [] -> []
 
 let prover_main decls =
-  prover [] [] decls |>
+  prover [] [] [] decls |>
   List.map (String.concat "\n") |>
   String.concat "\n\n" |>
   print_endline
